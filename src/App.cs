@@ -79,6 +79,7 @@ namespace LightControl
             };
 
             SystemEvents.DisplaySettingsChanged += OnDisplaysChanged;
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
 
             IntPtr warm = _panel.Handle;   // create the window up front so the first open is instant
             GC.KeepAlive(warm);
@@ -90,6 +91,11 @@ namespace LightControl
                 try { _panel.BeginInvoke((MethodInvoker)delegate { _panel.Relayout(); }); }
                 catch { }
             });
+        }
+
+        private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            if (e.Mode == PowerModes.Resume) OnDisplaysChanged(sender, EventArgs.Empty);
         }
 
         private void OnDisplaysChanged(object sender, EventArgs e)
@@ -131,6 +137,7 @@ namespace LightControl
             if (disposing)
             {
                 SystemEvents.DisplaySettingsChanged -= OnDisplaysChanged;
+                SystemEvents.PowerModeChanged -= OnPowerModeChanged;
                 _tray.Visible = false;
                 _tray.Dispose();
                 _panel.Dispose();
@@ -209,11 +216,20 @@ namespace LightControl
             Show();
             Activate();
 
-            // Pick up changes made elsewhere, without making the panel wait for the hardware.
+            // Re-scan on every open, off the UI thread: a monitor that was asleep when the app
+            // started raises no display-change event when it wakes, so a cached list goes stale.
             ThreadPool.QueueUserWorkItem(delegate
             {
-                _monitors.RefreshValues();
-                try { BeginInvoke((MethodInvoker)delegate { Invalidate(); }); }
+                int before = _monitors.Displays.Count;
+                if (_drag < 0) _monitors.Refresh(); else _monitors.RefreshValues();
+                try
+                {
+                    BeginInvoke((MethodInvoker)delegate
+                    {
+                        if (_monitors.Displays.Count != before) Relayout();
+                        else Invalidate();
+                    });
+                }
                 catch { }
             });
         }
