@@ -5,30 +5,23 @@ using System.Threading;
 
 namespace LightControl
 {
-    /// <summary>One controllable panel. DDC/CI for external monitors, WMI for the built-in one.</summary>
     internal sealed class Display
     {
         public string Name;
         public bool Internal;
 
-        // DDC/CI
         public IntPtr Handle = IntPtr.Zero;
         public uint Min, Max;
 
-        // WMI
         public string WmiInstance;
 
-        public int Value;              // 0..100, what the UI shows
-        public int Pending = -1;       // 0..100, queued for the worker thread
+        public int Value;
+        public int Pending = -1;
         public int Applied = -1;
 
         public bool IsWmi { get { return WmiInstance != null; } }
     }
 
-    /// <summary>
-    /// Enumerates brightness-capable displays and applies changes on a background thread so
-    /// dragging a slider never blocks the UI. Latest value wins; intermediate values are dropped.
-    /// </summary>
     internal sealed class MonitorManager : IDisposable
     {
         private readonly object _gate = new object();
@@ -45,8 +38,6 @@ namespace LightControl
         }
 
         public List<Display> Displays { get { lock (_gate) return _displays; } }
-
-        // ------------------------------------------------------------------ discovery
 
         public void Refresh()
         {
@@ -94,8 +85,6 @@ namespace LightControl
             try { Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, cb, IntPtr.Zero); }
             catch { }
 
-            // The built-in laptop panel usually answers to WMI, not DDC/CI. When WMI reports one,
-            // it wins over any DDC entry for the same internal panel.
             List<Display> wmi = QueryWmi(targets);
             if (wmi.Count > 0)
             {
@@ -190,11 +179,6 @@ namespace LightControl
             return list;
         }
 
-        /// <summary>
-        /// Re-reads current levels without re-enumerating, so the panel is accurate when
-        /// something else (Windows, a hotkey, the monitor's own buttons) changed brightness.
-        /// Displays with a change in flight are left alone.
-        /// </summary>
         public void RefreshValues()
         {
             List<Display> snapshot;
@@ -204,7 +188,7 @@ namespace LightControl
             for (int i = 0; i < snapshot.Count; i++)
             {
                 Display d = snapshot[i];
-                if (d.Pending >= 0 && d.Pending != d.Applied) continue;   // user is dragging
+                if (d.Pending >= 0 && d.Pending != d.Applied) continue;
 
                 try
                 {
@@ -247,9 +231,6 @@ namespace LightControl
             return map;
         }
 
-        // ------------------------------------------------------------------ applying
-
-        /// <summary>Queue a value; the worker applies the most recent one. Never blocks the UI.</summary>
         public void Set(Display d, int percent)
         {
             d.Value = Clamp(percent);
@@ -307,8 +288,6 @@ namespace LightControl
                 }
             }
         }
-
-        // ------------------------------------------------------------------ helpers
 
         private static int ToPercent(uint cur, uint min, uint max)
         {

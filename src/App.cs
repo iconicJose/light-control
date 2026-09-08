@@ -36,8 +36,6 @@ namespace LightControl
         public static readonly Color MenuHover = Color.FromArgb(45, 47, 53);
     }
 
-    // ---------------------------------------------------------------------- tray
-
     internal sealed class TrayApp : ApplicationContext
     {
         private readonly MonitorManager _monitors = new MonitorManager();
@@ -81,10 +79,9 @@ namespace LightControl
             SystemEvents.DisplaySettingsChanged += OnDisplaysChanged;
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
 
-            IntPtr warm = _panel.Handle;   // create the window up front so the first open is instant
+            IntPtr warm = _panel.Handle;
             GC.KeepAlive(warm);
 
-            // Discover off the UI thread so the tray icon appears instantly.
             ThreadPool.QueueUserWorkItem(delegate
             {
                 _monitors.Refresh();
@@ -148,8 +145,6 @@ namespace LightControl
         }
     }
 
-    // ---------------------------------------------------------------------- panel
-
     internal sealed class PanelForm : Form
     {
         private const int PAD = 14;
@@ -192,8 +187,8 @@ namespace LightControl
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x00000080;   // WS_EX_TOOLWINDOW - keep out of alt-tab
-                cp.ClassStyle |= 0x00020000; // CS_DROPSHADOW
+                cp.ExStyle |= 0x00000080;
+                cp.ClassStyle |= 0x00020000;
                 return cp;
             }
         }
@@ -206,18 +201,14 @@ namespace LightControl
             catch { }
         }
 
-        // ------------------------------------------------------------ show / hide
-
         public void Toggle()
         {
             if (Visible) { HidePanel(); return; }
-            if (Environment.TickCount - _lastHidden < 250) return; // click that dismissed us
+            if (Environment.TickCount - _lastHidden < 250) return;
             Relayout();
             Show();
             Activate();
 
-            // Re-scan on every open, off the UI thread: a monitor that was asleep when the app
-            // started raises no display-change event when it wakes, so a cached list goes stale.
             ThreadPool.QueueUserWorkItem(delegate
             {
                 int before = _monitors.Displays.Count;
@@ -265,8 +256,6 @@ namespace LightControl
 
         private int S(int v) { return (int)Math.Round(v * _sc); }
 
-        // ------------------------------------------------------------ geometry
-
         private Rectangle SliderRect(int index)
         {
             int top = S(PAD) + index * (S(LABEL_H + GAP + SLIDER_H) + S(ROW_GAP)) + S(LABEL_H + GAP);
@@ -294,8 +283,6 @@ namespace LightControl
             double pos = x - (r.Left + knob);
             return MonitorManager.Clamp((int)Math.Round(pos * 100.0 / usable));
         }
-
-        // ------------------------------------------------------------ input
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
@@ -359,8 +346,6 @@ namespace LightControl
             _monitors.Set(list[index], v);
             Invalidate();
         }
-
-        // ------------------------------------------------------------ paint
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -442,7 +427,6 @@ namespace LightControl
     {
         private static float _scale;
 
-        /// <summary>System DPI scale. The manifest declares system DPI awareness, so this is fixed per session.</summary>
         public static float Scale
         {
             get
@@ -460,8 +444,6 @@ namespace LightControl
             }
         }
     }
-
-    // ---------------------------------------------------------------------- icon
 
     internal static class BulbIcon
     {
@@ -511,8 +493,6 @@ namespace LightControl
             Native.DestroyIcon(h);
         }
     }
-
-    // ---------------------------------------------------------------------- dark menu
 
     internal sealed class DarkMenuRenderer : ToolStripProfessionalRenderer
     {

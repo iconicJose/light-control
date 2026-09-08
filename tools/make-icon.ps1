@@ -1,5 +1,3 @@
-# Generates src/app.ico (a light bulb) so the repo carries no binary asset.
-# Entries are classic 32-bpp DIBs, which every Windows resource compiler accepts.
 param([string]$Out = (Join-Path $PSScriptRoot '..\src\app.ico'))
 
 Add-Type -AssemblyName System.Drawing
@@ -30,7 +28,6 @@ function New-BulbDib([int]$s) {
     $g.FillRectangle($base, [float]($cx - $w / 2), [float]($s * 0.75 + $h * 1.9), [float]$w, [float]$h)
     $g.Dispose(); $glass.Dispose(); $base.Dispose()
 
-    # top-down BGRA rows
     $rect = New-Object System.Drawing.Rectangle(0, 0, $s, $s)
     $data = $bmp.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::ReadOnly, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $pixels = New-Object byte[] ($data.Stride * $s)
@@ -42,20 +39,17 @@ function New-BulbDib([int]$s) {
     $ms = New-Object System.IO.MemoryStream
     $bw = New-Object System.IO.BinaryWriter($ms)
 
-    # BITMAPINFOHEADER
     $bw.Write([UInt32]40)
     $bw.Write([Int32]$s)
-    $bw.Write([Int32]($s * 2))     # image + mask
+    $bw.Write([Int32]($s * 2))
     $bw.Write([UInt16]1)
     $bw.Write([UInt16]32)
-    $bw.Write([UInt32]0)           # BI_RGB
+    $bw.Write([UInt32]0)
     $bw.Write([UInt32]($s * $s * 4))
     $bw.Write([Int32]0); $bw.Write([Int32]0); $bw.Write([UInt32]0); $bw.Write([UInt32]0)
 
-    # XOR bitmap, bottom-up
     for ($y = $s - 1; $y -ge 0; $y--) { $bw.Write($pixels, $y * $stride, $s * 4) }
 
-    # AND mask: zeroed, alpha carries transparency
     $maskRow = [int][Math]::Ceiling($s / 8.0)
     if ($maskRow % 4 -ne 0) { $maskRow += 4 - ($maskRow % 4) }
     $bw.Write((New-Object byte[] ($maskRow * $s)))

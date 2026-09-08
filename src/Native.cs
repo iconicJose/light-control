@@ -5,7 +5,6 @@ namespace LightControl
 {
     internal static class Native
     {
-        // ---------- monitor enumeration ----------
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct RECT { public int Left, Top, Right, Bottom; }
@@ -28,8 +27,6 @@ namespace LightControl
         [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetMonitorInfoW")]
         internal static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX info);
 
-        // ---------- DDC/CI ----------
-
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         internal struct PHYSICAL_MONITOR
         {
@@ -51,8 +48,6 @@ namespace LightControl
 
         [DllImport("dxva2.dll", SetLastError = true)]
         internal static extern bool DestroyPhysicalMonitor(IntPtr hMonitor);
-
-        // ---------- display config (friendly names + internal panel detection) ----------
 
         internal const uint QDC_ONLY_ACTIVE_PATHS = 2;
         internal const uint DEVICE_INFO_GET_SOURCE_NAME = 1;
@@ -126,8 +121,6 @@ namespace LightControl
 
         [DllImport("user32.dll")]
         internal static extern int DisplayConfigGetDeviceInfo(ref TARGET_DEVICE_NAME info);
-
-        // ---------- window polish ----------
 
         [DllImport("dwmapi.dll")]
         internal static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
